@@ -1,8 +1,11 @@
 import os
+import sys
 
 import numpy as np
 import pandas as pd
 import matplotlib.pyplot as plt
+from sklearn.linear_model import LinearRegression
+from mpl_toolkits.mplot3d import Axes3D
 
 plt.switch_backend('Qt5Agg')
 
@@ -193,6 +196,111 @@ def plot_2dim_ols_with_residuals(path):
     plt.close()
 
 
+def plot_3dim_mlr(path):
+    df = pd.read_csv("speech_quality.csv")
+    print(df.head())
+
+    x = df["background_noise"].tolist()
+    y = df["delay"].tolist()
+    z = df["overall_quality"].tolist()
+
+    fig = plt.figure()
+    ax = fig.add_subplot(111, projection='3d')
+
+    ax.scatter(x, y, z)
+
+    A = np.vstack([x, y, np.ones_like(x)]).T
+    plane_coef, _, _, _ = np.linalg.lstsq(A, z, rcond=None)
+
+    # Create a meshgrid for the plane
+    x_plane, y_plane = np.meshgrid(np.unique(x), np.unique(y))
+    z_plane = plane_coef[0] * x_plane + plane_coef[1] * y_plane + plane_coef[2]
+
+    # Add the regression plane
+    ax.plot_surface(x_plane, y_plane, z_plane, alpha=0.5)
+
+    # Add labels and title
+    ax.set_xlabel('Noise')
+    ax.set_ylabel('Delay')
+    ax.set_zlabel('Quality Rating')
+    plt.title('Multiple Linear Regression')
+
+    plt.savefig(f"{path}/lr7")
+    plt.close()
+
+
+def plot_mlr(path):
+    df = pd.read_csv("speech_quality.csv")
+    x1 = np.array(df["background_noise"])
+    x2 = np.array(df["delay"])
+    y = df["overall_quality"].tolist()
+
+    fig = plt.figure()
+    ax = fig.add_subplot(projection='3d')
+    ax.scatter(x1, x2, y)
+
+    # 2d
+    A_2d = np.vstack([x1, np.ones(len(x1))]).T
+    solution_2d, _, _, _ = np.linalg.lstsq(A_2d, y, rcond=None)
+    ols_line = np.linalg.lstsq(A_2d, y, rcond=None)[0]
+    line = ols_line[0] * x1 + ols_line[1]
+    residuals = [r - line_i for line_i, r in zip(line, y)]
+    ax.plot(x1, line, zs=9, zdir='y', label="OLS line", color="green")
+
+    for x_i, r_i, y_i, line_i in zip(x1, residuals, y, line):
+        if r_i < 0:
+            ymin = y_i
+            ymax = line_i
+        else:
+            ymin = line_i
+            ymax = y_i
+        ax.plot([x_i, x_i], [ymin, ymax], color='red', zs=9, zdir='y')
+
+    # 3d
+    A = np.vstack([x1, x2, np.ones(len(x1))])
+    solution_3d, residuals, _, _ = np.linalg.lstsq(A.T, y, rcond=None)
+    print(solution_3d)
+    print(residuals)
+    xxx = np.linalg.lstsq(A.T, y, rcond=None)[0]
+    xx = np.dot(A.T, xxx)
+    individual_residuals = y - xx
+    print(individual_residuals)
+    x1_plane, x2_plane = np.meshgrid(np.unique(x1), np.unique(x2))
+    z_plane = solution_3d[0] * x1_plane + solution_3d[1] * x2_plane + solution_3d[2]
+    ax.plot_surface(x1_plane, x2_plane, z_plane, alpha=0.5)
+
+    for x1_i, x2_i, y_i, r_i in zip(x1, x2, y, individual_residuals):
+        if r_i < 0:
+            ymin = y_i
+            ymax = y_i - r_i
+        else:
+            ymin = y_i - r_i
+            ymax = y_i
+        ax.plot(x1_i, x2_i, [ymin, ymax], color='red')
+
+    # plot stuff
+    ax.set_xlabel('Noise')
+    ax.set_ylabel('Delay')
+    ax.set_zlabel('Quality Rating')
+    plt.title('Multiple Linear Regression')
+    plt.savefig(f"{path}/lr8")
+    plt.close()
+
+
+def plot_non_linear_lr(path):
+    df = pd.read_csv("speech_quality.csv")
+    print(df.head())
+
+    x = df["background_noise"].tolist()
+    y = df["delay"].tolist()
+    z = df["overall_quality"].tolist()
+
+    # np.linalg.
+
+    plt.scatter(x, z)
+    plt.show()
+
+
 if __name__ == '__main__':
     path = "plots"
     if not os.path.isdir(path):
@@ -204,3 +312,6 @@ if __name__ == '__main__':
     plot_2dim_descriptive(path)
     plot_2dim_ols(path)
     plot_2dim_ols_with_residuals(path)
+    plot_3dim_mlr(path)
+    plot_mlr(path)
+    plot_non_linear_lr(path)

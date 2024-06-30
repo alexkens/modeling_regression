@@ -4,6 +4,7 @@ import sys
 import numpy as np
 import pandas as pd
 import matplotlib.pyplot as plt
+from scipy.optimize import curve_fit
 from sklearn.linear_model import LinearRegression
 from mpl_toolkits.mplot3d import Axes3D
 
@@ -291,14 +292,39 @@ def plot_non_linear_lr(path):
     df = pd.read_csv("speech_quality.csv")
     print(df.head())
 
-    x = df["background_noise"].tolist()
-    y = df["delay"].tolist()
-    z = df["overall_quality"].tolist()
+    x = np.array(df["background_noise"])
+    y = df["non_linear_overall_quality"].tolist()
 
-    # np.linalg.
+    # linear
+    A = np.vstack([x, np.ones(len(x))]).T
+    solution_2d, _, _, _ = np.linalg.lstsq(A, y, rcond=None)
+    ols_line = np.linalg.lstsq(A, y, rcond=None)[0]
+    line = ols_line[0] * x + ols_line[1]
+    residuals = [r - line_i for line_i, r in zip(line, y)]
+    # plt.plot(x, line, label="OLS line", color="green", alpha=0.5)
 
-    plt.scatter(x, z)
+    # non-linear
+    coeff = [25, -1.5, 0.05, -0.0005]
+    c, cov = curve_fit(non_linear_formula, x, y)
+    print(coeff)
+    print(c)
+    X = np.linspace(0, 100, 50)
+    pred = [non_linear_formula(xi, *c) for xi in X]
+
+    plt.scatter(x, y)
+    plt.plot(X, pred, "r")
+
+    # plot stuff
+    plt.xlabel('Noise')
+    plt.ylabel('Quality Rating')
+    plt.title('Non-linear Regression')
+    # plt.savefig(f"{path}/lr9")
     plt.show()
+    plt.close()
+
+
+def non_linear_formula(xi, b0, b1, b2, b3):
+    return b0 + b1 * xi + b2 * (xi ** 2) + b3 * (xi ** 3)
 
 
 if __name__ == '__main__':
@@ -306,12 +332,12 @@ if __name__ == '__main__':
     if not os.path.isdir(path):
         os.mkdir(path)
 
-    plot_graph(path)
+    """plot_graph(path)
     plot_residuals(path)
     plot_2dim(path)
     plot_2dim_descriptive(path)
     plot_2dim_ols(path)
     plot_2dim_ols_with_residuals(path)
     plot_3dim_mlr(path)
-    plot_mlr(path)
+    plot_mlr(path)"""
     plot_non_linear_lr(path)

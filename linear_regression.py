@@ -23,30 +23,30 @@ def plot_graph(path):
 
     plt.scatter(x, y, color="#1f77b4")
     # mean fit line
-    plt.axhline(mean, color="black", linestyle="--")
+    # plt.axhline(mean, color="black", linestyle="--")
 
-    plt.text(5, mean, s=f"best fit line [{mean:.1f}]", fontsize=12, verticalalignment='bottom')
+    # plt.text(5, mean, s=f"best fit line [{mean:.1f}]", fontsize=12, verticalalignment='bottom')
     plt.title("Speech Quality")
     plt.xlabel("Wav Sample")
     plt.ylabel("Quality")
-    # plt.show()
-    plt.savefig(f"{path}/lr1")
+    plt.show()
+    # plt.savefig(f"{path}/lr1")
     plt.close()
 
 
 def plot_residuals(path):
     df = pd.read_csv("speech_quality.csv")
-    print(df.head())
+    # print(df.head())
 
     x = [i for i in range(df.shape[0])]
     y = df["overall_quality"]
 
     mean = np.mean(y)
     residuals = [abs(mean - i) for i in y]
-
     plt.scatter(x, y, color="#1f77b4")
     # mean fit line
     plt.axhline(mean, color="black", linestyle="--")
+
     # residuals
     for x_i, y_i, r_i in zip(x, y, residuals):
         if y_i + r_i < mean:
@@ -166,9 +166,33 @@ def plot_2dim_ols_with_residuals(path):
     f_x = [x_i * b1 + b0 for x_i in x]
     fx_string = f"f(x) = {b1:.1f}x + {b0:.1f}"
 
+    """residuals = [abs(mean_y - i) for i in y]
+    residuals_tothepowerof2 = [abs(mean_y - i) ** 2 for i in y]
+    value = sum(residuals_tothepowerof2)
+    print(residuals)
+    print(residuals_tothepowerof2)
+    print("value: ", value)
+
+    f_x = len(x) * [mean_y]
+    for x_i, y_i, f_x_i, r_i in zip(x, y, f_x, residuals):
+        if r_i < 0:
+            ymin = y_i
+            ymax = f_x_i
+        else:
+            ymin = f_x_i
+            ymax = y_i
+        plt.vlines(x=x_i, ymin=ymin, ymax=ymax, colors='red', linestyles='--', lw=2)
+        plt.text(x_i + 0.1, ((ymax - ymin) / 2) + ymin, s=f"{r_i:.1f}", horizontalalignment='left')"""
+
     plt.scatter(x, y)
     plt.plot(x, f_x, c="green")
-    plt.scatter(mean_x, mean_y, s=100, c='black', marker="x")
+    # plt.axhline(mean_y, color="black", linestyle="--")
+
+    # variance = 20
+    # plt.plot(np.array(x) + variance, f_x, "black")
+    # plt.plot(np.array(x) - variance, f_x, "black")
+
+    # plt.scatter(mean_x, mean_y, s=100, c='black', marker="x")
 
     residuals = [r - y_i for y_i, r in zip(y, f_x)]
     print(y)
@@ -186,14 +210,45 @@ def plot_2dim_ols_with_residuals(path):
             ymin = f_x_i
             ymax = y_i
         plt.vlines(x=x_i, ymin=ymin, ymax=ymax, colors='red', linestyles='--', lw=2)
-        plt.text(x_i + 1, y_i, s=f"{abs(r_i):.1f}", horizontalalignment='left')
+        # plt.text(x_i + 1, y_i, s=f"{abs(r_i):.1f}", horizontalalignment='left')
 
-    plt.text(20, 50, fx_string, c="green")
-    plt.text(mean_x + 2, mean_y - 1, f"[{mean_x}, {mean_y}]")
+    # plt.text(20, 50, fx_string, c="green")
+    # plt.text(mean_x + 2, mean_y - 1, f"[{mean_x}, {mean_y}]")
     plt.title("Speech Quality")
     plt.xlabel("background_noise")
     plt.ylabel("overall_quality")
-    plt.savefig(f"{path}/lr6")
+    # plt.savefig(f"{path}/lr6")
+    plt.show()
+    plt.close()
+
+
+def plot_residuals_distribution():
+    df = pd.read_csv("speech_quality.csv")
+    x = df["background_noise"].tolist()
+    y = df["overall_quality"].tolist()
+
+    mean_x = np.mean(x)
+    mean_y = np.mean(y)
+
+    numerator = 0
+    denominator = 0
+    for x_i, y_i in zip(x, y):
+        numerator += (x_i - mean_x) * (y_i - mean_y)
+        denominator += (x_i - mean_x) ** 2
+    b1 = numerator / denominator
+    b0 = mean_y - b1 * mean_x
+    f_x = [x_i * b1 + b0 for x_i in x]
+
+    # plt.scatter(x, y)
+    # plt.plot(x, f_x, c="green")
+    residuals = [r - y_i for y_i, r in zip(y, f_x)]
+    print(residuals)
+    normal_data = np.random.normal(0, 10, 1000)
+    counts, bins = np.histogram(normal_data)
+    plt.hist(bins[:-1], bins, weights=counts)
+
+    plt.title("Residuals")
+    plt.show()
     plt.close()
 
 
@@ -295,6 +350,8 @@ def plot_non_linear_lr(path):
     x = np.array(df["background_noise"])
     y = df["non_linear_overall_quality"].tolist()
 
+    non_linear_func = non_linear_formula_8
+
     # linear
     A = np.vstack([x, np.ones(len(x))]).T
     solution_2d, _, _, _ = np.linalg.lstsq(A, y, rcond=None)
@@ -305,14 +362,14 @@ def plot_non_linear_lr(path):
 
     # non-linear
     coeff = [25, -1.5, 0.05, -0.0005]
-    c, cov = curve_fit(non_linear_formula, x, y)
+    c, cov = curve_fit(non_linear_func, x, y)
     print(coeff)
     print(c)
-    X = np.linspace(0, 100, 50)
-    pred = [non_linear_formula(xi, *c) for xi in X]
+    X = np.linspace(10, 100, 50)
+    pred = [non_linear_func(xi, *c) for xi in X]
 
     plt.scatter(x, y)
-    plt.plot(X, pred, "r")
+    # plt.plot(X, pred, "g")
 
     # plot stuff
     plt.xlabel('Noise')
@@ -323,8 +380,32 @@ def plot_non_linear_lr(path):
     plt.close()
 
 
-def non_linear_formula(xi, b0, b1, b2, b3):
+def non_linear_formula_2(xi, b0, b1, b2):
+    return b0 + b1 * xi + b2 * (xi ** 2)
+
+
+def non_linear_formula_3(xi, b0, b1, b2, b3):
     return b0 + b1 * xi + b2 * (xi ** 2) + b3 * (xi ** 3)
+
+
+def non_linear_formula_4(xi, b0, b1, b2, b3, b4):
+    return b0 + b1 * xi + b2 * (xi ** 2) + b3 * (xi ** 3) + b4 * (xi ** 4)
+
+
+def non_linear_formula_5(xi, b0, b1, b2, b3, b4, b5):
+    return b0 + b1 * xi + b2 * (xi ** 2) + b3 * (xi ** 3) + b4 * (xi ** 4) + b5 * (xi ** 5)
+
+
+def non_linear_formula_6(xi, b0, b1, b2, b3, b4, b5, b6):
+    return b0 + b1 * xi + b2 * (xi ** 2) + b3 * (xi ** 3) + b4 * (xi ** 4) + b5 * (xi ** 5) + b6 * (xi ** 6)
+
+
+def non_linear_formula_7(xi, b0, b1, b2, b3, b4, b5, b6, b7):
+    return b0 + b1 * xi + b2 * (xi ** 2) + b3 * (xi ** 3) + b4 * (xi ** 4) + b5 * (xi ** 5) + b6 * (xi ** 6) + b7 * (xi ** 7)
+
+
+def non_linear_formula_8(xi, b0, b1, b2, b3, b4, b5, b6, b7, b8):
+    return b0 + b1 * xi + b2 * (xi ** 2) + b3 * (xi ** 3) + b4 * (xi ** 4) + b5 * (xi ** 5) + b6 * (xi ** 6) + b7 * (xi ** 7) + b8 * (xi ** 8)
 
 
 if __name__ == '__main__':
@@ -332,12 +413,14 @@ if __name__ == '__main__':
     if not os.path.isdir(path):
         os.mkdir(path)
 
-    """plot_graph(path)
-    plot_residuals(path)
-    plot_2dim(path)
-    plot_2dim_descriptive(path)
-    plot_2dim_ols(path)
+    # plot_graph(path)
+    # plot_residuals(path)
+    # plot_2dim(path)
+    # plot_2dim_descriptive(path)
+    # plot_2dim_ols(path)
     plot_2dim_ols_with_residuals(path)
-    plot_3dim_mlr(path)
-    plot_mlr(path)"""
-    plot_non_linear_lr(path)
+    # plot_3dim_mlr(path)
+    # plot_mlr(path)
+    # plot_non_linear_lr(path)
+
+    # plot_residuals_distribution()
